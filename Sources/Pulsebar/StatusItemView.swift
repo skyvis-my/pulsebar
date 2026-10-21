@@ -13,8 +13,9 @@ final class StatusItemView: NSView {
     private static let small = NSFont.monospacedSystemFont(ofSize: 9, weight: .medium)
     private static let big = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
     private static let line = NSFont.monospacedSystemFont(ofSize: 10, weight: .medium)
-    private static let pad: CGFloat = 3
-    private static let gap: CGFloat = 4
+    /// macOS already insets every status item by 8 pt per side, so the content runs edge to edge.
+    private static let pad: CGFloat = 0
+    private static let gap: CGFloat = 3
     /// Widest possible speed line; the twin column is always exactly this wide.
     private static let twinSample = "↑999M"
     private static let barCount = 6
