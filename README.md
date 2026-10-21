@@ -38,3 +38,13 @@ jitter / loss for ping and peak / total moved for bandwidth. The last hour of sa
 
 Requires macOS 14+ and Xcode command line tools. `swift test` checks the fixed-width formatting.
 `Pulsebar --snapshot <dir>` renders every style and the popover to PNGs, then quits.
+
+To install and start at login:
+
+```bash
+ditto build/Pulsebar.app /Applications/Pulsebar.app
+/Applications/Pulsebar.app/Contents/MacOS/Pulsebar --open-at-login
+open /Applications/Pulsebar.app
+```
+
+`--no-open-at-login` turns it off again (same as the checkbox in the popover).
