@@ -39,6 +39,29 @@ enum Snapshot {
             }
         }
 
+        // All four styles side by side with live data, spaced like real menu bar items (8 pt system inset per side).
+        for dark in [false, true] {
+            let inset: CGFloat = 8, height: CGFloat = 24
+            let total = MenuStyle.allCases.reduce(inset * 2) { $0 + StatusItemView.width(for: $1) + inset * 2 }
+            let strip = Backdrop(frame: NSRect(x: 0, y: 0, width: total, height: height),
+                                 color: dark ? NSColor(white: 0.12, alpha: 1) : NSColor(white: 0.93, alpha: 1))
+            strip.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+            var x = inset * 2
+            for style in MenuStyle.allCases {
+                let w = StatusItemView.width(for: style)
+                let v = StatusItemView(frame: NSRect(x: x, y: 0, width: w, height: height))
+                v.style = style
+                v.up = monitor.up
+                v.down = monitor.down
+                v.ping = monitor.ping
+                v.recent = monitor.recentPings(20)
+                v.recentRates = monitor.recentRates(30)
+                strip.addSubview(v)
+                x += w + inset * 2
+            }
+            save(strip, dir.appendingPathComponent("menubar-\(dark ? "dark" : "light").png"))
+        }
+
         // ImageRenderer draws text and charts faithfully; AppKit-backed controls (text field, picker) show as placeholders.
         for dark in [false, true] {
             let content = PopoverView(monitor: monitor)
@@ -52,6 +75,12 @@ enum Snapshot {
                     .write(to: dir.appendingPathComponent("popover-\(dark ? "dark" : "light").png"))
             }
         }
+    }
+
+    /// Captures a live window, including its frame (popover chrome), without screen-recording permission.
+    static func capture(_ window: NSWindow, to url: URL) {
+        guard let frameView = window.contentView?.superview ?? window.contentView else { return }
+        save(frameView, url)
     }
 
     private static func save(_ view: NSView, _ url: URL) {

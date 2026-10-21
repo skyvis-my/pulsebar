@@ -1,6 +1,29 @@
 # Pulsebar
 
-A minimal macOS menu bar monitor for network bandwidth and ping, with a fixed width that never shifts.
+A minimal macOS menu bar monitor for network bandwidth and ping. It stays a fixed width, so the
+menu bar never shifts as the numbers change.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/menubar-dark.png">
+  <img alt="The four menu bar styles side by side" src="docs/menubar-light.png" width="640">
+</picture>
+
+<img alt="Popover with ping and bandwidth history" src="docs/popover.png" width="366">
+
+## Install
+
+```bash
+brew install --cask skyvis-my/tap/pulsebar
+```
+
+Or download `Pulsebar-<version>.zip` from [Releases](https://github.com/skyvis-my/pulsebar/releases),
+unzip, and move `Pulsebar.app` to `/Applications`.
+
+Pulsebar is ad-hoc signed, not notarized by Apple. The Homebrew cask clears the download
+quarantine flag for you. If you install from the zip, macOS will block the first launch: right-click
+the app, choose **Open**, then confirm (or run `xattr -dr com.apple.quarantine /Applications/Pulsebar.app`).
+
+Requires macOS 14 or later, on Apple silicon or Intel.
 
 ## Menu bar styles
 
@@ -21,7 +44,8 @@ no unit. A red `–` means the probe timed out.
 ## Popover
 
 Click the item for ping and bandwidth history graphs (1m / 5m / 15m / 1h), with min / avg / max /
-jitter / loss for ping and peak / total moved for bandwidth. The last hour of samples is saved to
+jitter / loss for ping and peak / total moved for bandwidth. You can also change the menu bar
+style, the ping host, and open at login there. The last hour of samples is saved to
 `~/Library/Application Support/Pulsebar/history.json` and reloaded on launch.
 
 ## How it measures
@@ -29,23 +53,30 @@ jitter / loss for ping and peak / total moved for bandwidth. The last hour of sa
 - **Bandwidth**: 64-bit interface counters from `sysctl(NET_RT_IFLIST2)`, summed over physical
   interfaces (`en*`, `pdp_ip*`). VPN tunnels are skipped to avoid counting traffic twice.
 - **Ping**: unprivileged ICMP echo (`SOCK_DGRAM` / `IPPROTO_ICMP`) once a second, 0.9 s timeout.
-  The default host is `1.1.1.1`.
+  No root and no `ping` subprocess. The default host is `1.1.1.1`.
 
-## Build and run
+Pulsebar makes no network requests other than the ping, and collects no data.
+
+## Build from source
 
 ```bash
 ./scripts/build-app.sh && open build/Pulsebar.app
 ```
 
-Requires macOS 14+ and Xcode command line tools. `swift test` checks the fixed-width formatting.
-`Pulsebar --snapshot <dir>` renders every style and the popover to PNGs, then quits.
+Needs Xcode 16 or later. `swift test` checks the fixed-width formatting.
+`Pulsebar --snapshot <dir>` renders every style and the popover to PNGs (used for the screenshots
+above), then quits. `Pulsebar --open-at-login` / `--no-open-at-login` toggle the login item from
+the command line.
 
-To install and start at login:
+## Releasing
 
 ```bash
-ditto build/Pulsebar.app /Applications/Pulsebar.app
-/Applications/Pulsebar.app/Contents/MacOS/Pulsebar --open-at-login
-open /Applications/Pulsebar.app
+./scripts/release.sh 0.2.0
 ```
 
-`--no-open-at-login` turns it off again (same as the checkbox in the popover).
+Builds a universal app, publishes a GitHub release with the zip, and bumps the cask in
+[skyvis-my/homebrew-tap](https://github.com/skyvis-my/homebrew-tap).
+
+## License
+
+[MIT](LICENSE)

@@ -29,9 +29,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         refresh()
 
         if let dir = Snapshot.directory {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [monitor] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [self] in
                 Snapshot.render(monitor: monitor, to: dir)
-                NSApp.terminate(nil)
+                // Also capture the real status item and popover windows as AppKit draws them.
+                toggle()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [self] in
+                    if let w = item.button?.window { Snapshot.capture(w, to: dir.appendingPathComponent("live-item.png")) }
+                    if let w = popover.contentViewController?.view.window {
+                        Snapshot.capture(w, to: dir.appendingPathComponent("live-popover.png"))
+                    }
+                    NSApp.terminate(nil)
+                }
             }
         }
     }
@@ -61,7 +69,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popover.performClose(nil)
         } else {
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
+            let window = popover.contentViewController?.view.window
+            window?.makeKey()
+            window?.makeFirstResponder(nil) // don't land in the host field with its text selected
         }
     }
 }

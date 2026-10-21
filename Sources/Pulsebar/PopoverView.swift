@@ -31,10 +31,11 @@ struct PopoverView: View {
     private var window: Window { Window(rawValue: windowRaw) ?? .m5 }
 
     var body: some View {
-        let raw = monitor.samples.suffix(window.rawValue)
-        let points = Self.bucket(Array(raw), maxPoints: 180)
         let now = Date()
         let domain = now.addingTimeInterval(-Double(window.rawValue))...now
+        // Select by time, not count: restored history has gaps, so the last N samples can reach further back.
+        let raw = monitor.samples.suffix(window.rawValue).filter { $0.date >= domain.lowerBound }
+        let points = Self.bucket(Array(raw), maxPoints: 180)
 
         VStack(alignment: .leading, spacing: 14) {
             header
