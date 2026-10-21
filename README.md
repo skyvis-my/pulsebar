@@ -50,14 +50,36 @@ style, the ping host, and open at login there. The last hour of samples is saved
 
 ## Backpack mode: lid closed, screen off, still running
 
-If sleep is disabled on your Mac (`sudo pmset -a disablesleep 1`, or a keep-awake app that sets it),
-closing the lid keeps macOS and the network running, but the built-in screen stays lit. With
-**Screen off when lid closes** on (the default), Pulsebar turns the display off about 2 seconds
-after the lid closes. It does nothing while an external monitor is awake, so lid-closed desk setups
-are unaffected. The popover shows whether sleep is currently disabled. No admin rights are needed.
+Two switches in the popover:
 
-Pulsebar doesn't change your sleep setting. A closed bag blocks airflow, so keep heavy workloads
-out of the backpack.
+- **Keep running with lid closed** disables sleep (`pmset -a disablesleep 1`) so macOS and the
+  network keep running with the lid shut. It always starts off, and turns itself off (restoring
+  normal sleep):
+  - at 20% battery when not charging,
+  - when macOS reports the Mac is running seriously hot,
+  - when Pulsebar quits, including logout, shutdown, or a `kill`,
+  - on the next launch, if Pulsebar crashed while it was on.
+
+  While it's on, the ↑↓ arrows in the menu bar turn orange (the ping number, in the ping-only style).
+- **Screen off when lid closes** (on by default). With sleep disabled, macOS leaves the built-in
+  screen lit behind a closed lid. Pulsebar turns it off about 2 seconds after the lid closes. It
+  does nothing while an external monitor is awake, so lid-closed desk setups are unaffected.
+
+A closed bag blocks airflow, so keep heavy workloads out of the backpack.
+
+### One-time permission
+
+Turning sleep off needs root, and the guards must be able to turn it back on unattended, so
+Pulsebar runs exactly two commands through `sudo -n`. It never installs privileges itself. If the
+popover says it needs permission, allow those two commands (and nothing else) for your user:
+
+```bash
+echo "$(whoami) ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 1, /usr/bin/pmset -a disablesleep 0" > /tmp/pulsebar.sudoers
+sudo visudo -cf /tmp/pulsebar.sudoers && sudo install -m 0440 -o root -g wheel /tmp/pulsebar.sudoers /etc/sudoers.d/pulsebar
+```
+
+Remove it any time with `sudo rm /etc/sudoers.d/pulsebar`. If another app (such as Amphetamine)
+already allows these commands, nothing more is needed.
 
 ## How it measures
 

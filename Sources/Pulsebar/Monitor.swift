@@ -70,6 +70,12 @@ final class Monitor: ObservableObject {
     /// Whether macOS keeps running with the lid closed (`pmset disablesleep 1`, set by any app).
     @Published private(set) var sleepDisabled = LidWatcher.sleepDisabled
 
+    /// Pulsebar's own "keep running with lid closed" switch. Always starts off.
+    @Published private(set) var keepRunning = false
+    /// Why keep-running switched itself off, or why it couldn't switch on.
+    @Published private(set) var keepRunningNote: String?
+    private static let ownedKey = "keepRunningOwned"
+
     var onChange: (() -> Void)?
 
     private let lidWatcher = LidWatcher()
@@ -85,6 +91,72 @@ final class Monitor: ObservableObject {
         host = d.string(forKey: "host") ?? "1.1.1.1"
         lidDisplayOff = d.object(forKey: "lidDisplayOff") as? Bool ?? true
         loadHistory()
+        // Crash guard: if we left sleep disabled last time (no clean quit), undo it now.
+        if d.bool(forKey: Self.ownedKey) {
+            KeepAwake.set(false)
+            d.removeObject(forKey: Self.ownedKey)
+            keepRunningNote = "Turned off because Pulsebar didn't quit cleanly."
+            sleepDisabled = LidWatcher.sleepDisabled
+            logKeepRunning("crash recovery: restored sleep, sleepDisabled=\(sleepDisabled)")
+        }
+    }
+
+    // MARK: - Keep running with lid closed
+
+    func setKeepRunning(_ on: Bool) {
+        guard on else { stopKeepRunning(note: nil); return }
+        keepRunningNote = nil
+        let power = KeepAwake.battery
+        if let reason = KeepAwake.stopReason(onBattery: power.onBattery, batteryPercent: power.percent,
+                                             thermal: ProcessInfo.processInfo.thermalState) {
+            keepRunningNote = reason.blockedNote
+        } else if !KeepAwake.canToggle {
+            keepRunningNote = "Needs a one-time permission. See the Pulsebar README."
+        } else if !KeepAwake.set(true) {
+            keepRunningNote = "macOS refused the change, so sleep is unchanged."
+        } else {
+            UserDefaults.standard.set(true, forKey: Self.ownedKey)
+            keepRunning = true
+        }
+        sleepDisabled = LidWatcher.sleepDisabled
+        logKeepRunning("on requested: keepRunning=\(keepRunning) sleepDisabled=\(sleepDisabled) note=\(keepRunningNote ?? "-")")
+        onChange?()
+    }
+
+    /// Last 20 keep-running events, readable with `defaults read com.skyvis.pulsebar keepRunningLog`.
+    private func logKeepRunning(_ event: String) {
+        let d = UserDefaults.standard
+        let stamp = ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withTime, .withColonSeparatorInTime])
+        // Array(...): an ArraySlice isn't a property-list type, and UserDefaults silently drops it.
+        d.set(Array(((d.stringArray(forKey: "keepRunningLog") ?? []) + ["\(stamp) \(event)"]).suffix(20)),
+              forKey: "keepRunningLog")
+    }
+
+    /// Restores normal sleep if Pulsebar turned it off. Called by the guards and on quit.
+    func stopKeepRunning(note: String?) {
+        guard keepRunning || UserDefaults.standard.bool(forKey: Self.ownedKey) else { return }
+        KeepAwake.set(false)
+        UserDefaults.standard.removeObject(forKey: Self.ownedKey)
+        keepRunning = false
+        keepRunningNote = note
+        sleepDisabled = LidWatcher.sleepDisabled
+        logKeepRunning("stopped: sleepDisabled=\(sleepDisabled) note=\(note ?? "-")")
+        onChange?()
+    }
+
+    private func checkKeepRunningGuards() {
+        guard keepRunning else { return }
+        let power = KeepAwake.battery
+        if let reason = KeepAwake.stopReason(onBattery: power.onBattery, batteryPercent: power.percent,
+                                             thermal: ProcessInfo.processInfo.thermalState) {
+            stopKeepRunning(note: reason.offNote)
+        } else if !sleepDisabled {
+            // Something else re-enabled sleep; don't fight it.
+            keepRunning = false
+            UserDefaults.standard.removeObject(forKey: Self.ownedKey)
+            keepRunningNote = "Sleep was turned back on outside Pulsebar."
+            logKeepRunning("stepped aside: sleep re-enabled outside Pulsebar")
+        }
     }
 
     /// Most recent pings, oldest first, for the menu bar sparkline/bars.
@@ -134,6 +206,7 @@ final class Monitor: ObservableObject {
         if nextID % 60 == 0 { saveHistory() }
         let disabled = LidWatcher.sleepDisabled
         if disabled != sleepDisabled { sleepDisabled = disabled }
+        checkKeepRunningGuards()
         lidWatcher.tick(enabled: lidDisplayOff)
         firePing()
         onChange?()

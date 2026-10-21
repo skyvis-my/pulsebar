@@ -44,7 +44,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Routes SIGTERM/SIGINT through a normal quit so the keep-running guard always restores sleep.
+    private var signalSources: [DispatchSourceSignal] = []
+
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        for sig in [SIGTERM, SIGINT] {
+            signal(sig, SIG_IGN)
+            let source = DispatchSource.makeSignalSource(signal: sig, queue: .main)
+            source.setEventHandler { NSApp.terminate(nil) }
+            source.resume()
+            signalSources.append(source)
+        }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
+        monitor.stopKeepRunning(note: nil)
         monitor.saveHistory()
     }
 
@@ -57,6 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         view.ping = monitor.ping
         view.recent = monitor.recentPings(20)
         view.recentRates = monitor.recentRates(30)
+        view.keepRunning = monitor.keepRunning
         view.needsDisplay = true
         item.button?.setAccessibilityValue(
             "Download \(Format.rate(monitor.down)), upload \(Format.rate(monitor.up)), ping \(Format.pingLong(monitor.ping)) milliseconds"
@@ -68,6 +83,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             popover.performClose(nil)
         } else {
+            // An accessory app isn't active by default; without this the popover isn't key and a
+            // checkbox's first click only focuses the window instead of toggling it.
+            NSApp.activate()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
             let window = popover.contentViewController?.view.window
             window?.makeKey()

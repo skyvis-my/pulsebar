@@ -20,6 +20,14 @@ if args.contains("--open-at-login") || args.contains("--no-open-at-login") {
     exit(0)
 }
 
+// `Pulsebar --diagnose-keep-running`: read-only report of what the keep-running switch checks.
+if args.contains("--diagnose-keep-running") {
+    let power = KeepAwake.battery
+    print("canToggle=\(KeepAwake.canToggle) onBattery=\(power.onBattery) battery=\(power.percent.map(String.init) ?? "nil")",
+          "thermal=\(ProcessInfo.processInfo.thermalState.rawValue) sleepDisabled=\(LidWatcher.sleepDisabled)")
+    exit(0)
+}
+
 MainActor.assumeIsolated {
     let app = NSApplication.shared
     let delegate = AppDelegate()

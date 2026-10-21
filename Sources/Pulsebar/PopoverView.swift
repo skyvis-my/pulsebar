@@ -186,16 +186,19 @@ struct PopoverView: View {
                     .frame(width: 150)
             }
             VStack(alignment: .leading, spacing: 2) {
-                Toggle("Screen off when lid closes", isOn: $monitor.lidDisplayOff)
-                    .toggleStyle(.checkbox)
-                Text(monitor.sleepDisabled
-                     ? "Sleep is disabled, so the Mac keeps running."
-                     : "Sleep is on, so closing the lid sleeps the Mac.")
+                Toggle("Keep running with lid closed", isOn: Binding(
+                    get: { monitor.keepRunning },
+                    set: { monitor.setKeepRunning($0) }
+                ))
+                .toggleStyle(.checkbox)
+                Text(keepRunningCaption)
                     .font(.system(size: 10))
                     .fixedSize(horizontal: false, vertical: true)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(monitor.keepRunningNote == nil ? Color.secondary.opacity(0.7) : Color.orange)
                     .padding(.leading, 20)
             }
+            Toggle("Screen off when lid closes", isOn: $monitor.lidDisplayOff)
+                .toggleStyle(.checkbox)
             HStack {
                 Toggle("Open at login", isOn: $monitor.launchAtLogin)
                     .toggleStyle(.checkbox)
@@ -205,6 +208,16 @@ struct PopoverView: View {
             }
         }
         .font(.system(size: 12))
+    }
+
+    private var keepRunningCaption: String {
+        if let note = monitor.keepRunningNote { return note }
+        if monitor.keepRunning {
+            return "Turns off at \(KeepAwake.batteryFloor)% battery, if the Mac runs hot, or when Pulsebar quits."
+        }
+        return monitor.sleepDisabled
+            ? "Another app is keeping sleep disabled."
+            : "Closing the lid sleeps the Mac."
     }
 
     // MARK: - Bits

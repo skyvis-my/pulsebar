@@ -9,6 +9,8 @@ final class StatusItemView: NSView {
     var ping: Double?
     var recent: [Double?] = []
     var recentRates: [(up: Double, down: Double)] = []
+    /// "Keep running with lid closed" is on: arrows turn orange (ping number in ping-only style). No extra width.
+    var keepRunning = false
 
     private static let small = NSFont.monospacedSystemFont(ofSize: 9, weight: .medium)
     private static let big = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
@@ -54,11 +56,12 @@ final class StatusItemView: NSView {
             }
             drawCentered(Format.ping(ping), Self.big, pingColor, x: x, height: h)
         case .line:
-            drawCentered(Self.lineText(up: up, down: down, ping: ping), Self.line, label, x: x, height: h)
+            let text = tinted(Self.lineText(up: up, down: down, ping: ping), Self.line, label)
+            text.draw(at: NSPoint(x: x, y: (h - text.size().height) / 2))
         case .pingOnly:
             drawBars(at: x, height: h)
             x += CGFloat(Self.barCount) * Self.barStep - 1 + Self.gap
-            drawCentered(Format.ping(ping), Self.big, pingColor, x: x, height: h)
+            drawCentered(Format.ping(ping), Self.big, keepRunning && ping != nil ? .systemOrange : pingColor, x: x, height: h)
         }
     }
 
@@ -69,10 +72,19 @@ final class StatusItemView: NSView {
         let bottom = "↓" + Format.compactRate(down)
         let lineH = Self.small.ascender - Self.small.descender
         let y0 = (h - lineH * 2) / 2
-        let attrs: [NSAttributedString.Key: Any] = [.font: Self.small, .foregroundColor: color]
-        top.draw(at: NSPoint(x: x, y: y0), withAttributes: attrs)
-        bottom.draw(at: NSPoint(x: x, y: y0 + lineH), withAttributes: attrs)
+        tinted(top, Self.small, color).draw(at: NSPoint(x: x, y: y0))
+        tinted(bottom, Self.small, color).draw(at: NSPoint(x: x, y: y0 + lineH))
         return x + Self.measure(Self.twinSample, Self.small).width
+    }
+
+    /// Colors the ↑/↓ arrows orange while keep-running is on.
+    private func tinted(_ s: String, _ font: NSFont, _ color: NSColor) -> NSAttributedString {
+        let a = NSMutableAttributedString(string: s, attributes: [.font: font, .foregroundColor: color])
+        guard keepRunning else { return a }
+        for (i, unit) in s.utf16.enumerated() where unit == 0x2191 || unit == 0x2193 {
+            a.addAttribute(.foregroundColor, value: NSColor.systemOrange, range: NSRange(location: i, length: 1))
+        }
+        return a
     }
 
     /// Faint download (filled) and upload (line) history behind the speed numbers — costs no width.
