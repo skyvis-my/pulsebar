@@ -45,6 +45,7 @@ final class Monitor: ObservableObject {
     @Published private(set) var samples: [Sample] = []
     @Published private(set) var up = 0.0
     @Published private(set) var down = 0.0
+    /// Displayed ping (steadied, see `steadied`); nil means the last probe timed out.
     @Published private(set) var ping: Double?
     @Published var style: MenuStyle {
         didSet { UserDefaults.standard.set(style.rawValue, forKey: "style"); onChange?() }
@@ -159,6 +160,14 @@ final class Monitor: ObservableObject {
         }
     }
 
+    /// The ping to display: holds the shown value until a reading differs from it by more than 10%,
+    /// so the number doesn't flicker between 14 and 15. Timeouts and recoveries always show at once.
+    /// History and graphs use every raw reading.
+    static func steadied(shown: Double?, latest: Double?) -> Double? {
+        guard let latest, let shown, shown > 0 else { return latest }
+        return abs(latest - shown) / shown > 0.10 ? latest : shown
+    }
+
     /// Most recent pings, oldest first, for the menu bar sparkline/bars.
     func recentPings(_ n: Int) -> [Double?] { samples.suffix(n).map(\.ping) }
 
@@ -201,7 +210,7 @@ final class Monitor: ObservableObject {
     private func tick() {
         // Record the probe sent a second ago alongside this second's bandwidth, then send the next one.
         if let rate = sampler.sample() { up = rate.up; down = rate.down }
-        ping = latestPing
+        ping = Self.steadied(shown: ping, latest: latestPing)
         append(Sample(id: nextID, date: Date(), up: up, down: down, ping: latestPing))
         if nextID % 60 == 0 { saveHistory() }
         let disabled = LidWatcher.sleepDisabled
