@@ -12,17 +12,19 @@ final class StatusItemView: NSView {
 
     private static let small = NSFont.monospacedSystemFont(ofSize: 9, weight: .medium)
     private static let big = NSFont.monospacedSystemFont(ofSize: 12, weight: .medium)
-    private static let line = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
-    private static let pad: CGFloat = 4
-    private static let gap: CGFloat = 5
-    private static let sparkWidth: CGFloat = 30
+    private static let line = NSFont.monospacedSystemFont(ofSize: 10, weight: .medium)
+    private static let pad: CGFloat = 3
+    private static let gap: CGFloat = 4
+    private static let sparkWidth: CGFloat = 22
+    /// Widest possible speed line; the twin column is always exactly this wide.
+    private static let twinSample = "↑999M"
     private static let barCount = 6
 
     override var isFlipped: Bool { true }
     override func hitTest(_ point: NSPoint) -> NSView? { nil } // let the status button take clicks
 
     static func width(for style: MenuStyle) -> CGFloat {
-        let twin = measure("↑ 999 MB/s", small).width
+        let twin = measure(twinSample, small).width
         let pingW = measure("999", big).width
         switch style {
         case .twin: return ceil(pad + twin + gap + pingW + pad)
@@ -41,7 +43,7 @@ final class StatusItemView: NSView {
         switch style {
         case .twin, .spark:
             if style == .spark {
-                let twinW = Self.measure("↑ 999 MB/s", Self.small).width
+                let twinW = Self.measure(Self.twinSample, Self.small).width
                 drawRateHistory(in: NSRect(x: x - 2, y: 2, width: twinW + 4, height: h - 4))
             }
             x = drawTwin(at: x, height: h, color: label) + Self.gap
@@ -62,14 +64,14 @@ final class StatusItemView: NSView {
     // MARK: - Pieces
 
     private func drawTwin(at x: CGFloat, height h: CGFloat, color: NSColor) -> CGFloat {
-        let top = "↑ " + Format.rate(up)
-        let bottom = "↓ " + Format.rate(down)
+        let top = "↑" + Format.compactRate(up)
+        let bottom = "↓" + Format.compactRate(down)
         let lineH = Self.small.ascender - Self.small.descender
         let y0 = (h - lineH * 2) / 2
         let attrs: [NSAttributedString.Key: Any] = [.font: Self.small, .foregroundColor: color]
         top.draw(at: NSPoint(x: x, y: y0), withAttributes: attrs)
         bottom.draw(at: NSPoint(x: x, y: y0 + lineH), withAttributes: attrs)
-        return x + Self.measure("↑ 999 MB/s", Self.small).width
+        return x + Self.measure(Self.twinSample, Self.small).width
     }
 
     /// Faint download (filled) and upload (line) history behind the speed numbers — costs no width.
@@ -104,10 +106,10 @@ final class StatusItemView: NSView {
     private static let upTint = NSColor(red: 0.62, green: 0.55, blue: 0.95, alpha: 1)
 
     private func drawSpark(in rect: NSRect) {
-        let pts = Array(recent.suffix(20))
+        let pts = Array(recent.suffix(15))
         guard pts.count > 1 else { return }
         let ceiling = max(pts.compactMap { $0 }.max() ?? 0, 40)
-        let step = rect.width / CGFloat(19)
+        let step = rect.width / CGFloat(14)
         let x0 = rect.maxX - step * CGFloat(pts.count - 1)
         let path = NSBezierPath()
         var penDown = false
