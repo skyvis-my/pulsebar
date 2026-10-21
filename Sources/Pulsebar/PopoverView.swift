@@ -58,9 +58,9 @@ struct PopoverView: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(Format.pingLong(monitor.ping))
+            Text(Format.pingLong(monitor.livePing))
                 .font(.system(size: 34, weight: .semibold, design: .monospaced))
-                .foregroundStyle(monitor.ping == nil ? Color.red : Color.primary)
+                .foregroundStyle(monitor.livePing == nil ? Color.red : Color.primary)
                 .contentTransition(.numericText())
             Text(monitor.host)
                 .font(mono)

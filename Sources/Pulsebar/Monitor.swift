@@ -45,8 +45,10 @@ final class Monitor: ObservableObject {
     @Published private(set) var samples: [Sample] = []
     @Published private(set) var up = 0.0
     @Published private(set) var down = 0.0
-    /// Displayed ping (steadied, see `steadied`); nil means the last probe timed out.
+    /// Menu bar ping (steadied, see `steadied`); nil means the last probe timed out.
     @Published private(set) var ping: Double?
+    /// Every raw reading, for the popover's live number.
+    @Published private(set) var livePing: Double?
     @Published var style: MenuStyle {
         didSet { UserDefaults.standard.set(style.rawValue, forKey: "style"); onChange?() }
     }
@@ -160,13 +162,13 @@ final class Monitor: ObservableObject {
         }
     }
 
-    /// The ping to display: holds the shown value until a reading differs from it by at least 4 ms
-    /// and by more than 10%, so the number doesn't flicker between 12 and 14. Timeouts and recoveries
-    /// always show at once. History and graphs use every raw reading.
+    /// The menu bar ping: holds the shown value until a reading differs from it by at least 5 ms
+    /// and by more than 10%, so the number doesn't flicker between 12 and 15. Timeouts and recoveries
+    /// always show at once. The popover and graphs use every raw reading.
     static func steadied(shown: Double?, latest: Double?) -> Double? {
         guard let latest, let shown, shown > 0 else { return latest }
         let change = abs(latest - shown)
-        return change >= 4 && change / shown > 0.10 ? latest : shown
+        return change >= 5 && change / shown > 0.10 ? latest : shown
     }
 
     /// Most recent pings, oldest first, for the menu bar sparkline/bars.
@@ -212,6 +214,7 @@ final class Monitor: ObservableObject {
         // Record the probe sent a second ago alongside this second's bandwidth, then send the next one.
         if let rate = sampler.sample() { up = rate.up; down = rate.down }
         ping = Self.steadied(shown: ping, latest: latestPing)
+        livePing = latestPing
         append(Sample(id: nextID, date: Date(), up: up, down: down, ping: latestPing))
         if nextID % 60 == 0 { saveHistory() }
         let disabled = LidWatcher.sleepDisabled

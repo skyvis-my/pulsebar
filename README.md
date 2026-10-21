@@ -40,8 +40,8 @@ status item width is computed once from worst-case strings. Pick a style in the 
 The ↓ (green) and ↑ (purple) arrows fade when idle and brighten with traffic, up to full strength
 at 1 MB/s. Speeds are bytes per second with a one-letter unit (`K`, `M`, `G`), always whole numbers: the unit
 steps up at 1000, so three digits always fit. Ping is always in milliseconds, so the menu bar shows
-no unit. To keep it calm, the number only changes when a reading differs from the one shown by at
-least 4 ms and more than 10%; the graphs still record every reading. A red `–` means the probe timed out.
+no unit. To keep it calm, the menu bar number only changes when a reading differs from the one shown by
+at least 5 ms and more than 10%; the popover shows every reading live, and the graphs record them all. A red `–` means the probe timed out.
 
 ## Popover
 
