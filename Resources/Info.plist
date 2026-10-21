@@ -5,7 +5,7 @@
     <key>CFBundleExecutable</key>
     <string>Pulsebar</string>
     <key>CFBundleIdentifier</key>
-    <string>com.nanfengcheong.pulsebar</string>
+    <string>com.skyvis.pulsebar</string>
     <key>CFBundleName</key>
     <string>Pulsebar</string>
     <key>CFBundleDisplayName</key>
