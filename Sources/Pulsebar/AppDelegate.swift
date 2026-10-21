@@ -6,7 +6,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let monitor = Monitor()
     private var item: NSStatusItem!
     private let view = StatusItemView()
-    private let popover = NSPopover()
+    private let dropdown = DropdownPanel()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         item = NSStatusBar.system.statusItem(withLength: StatusItemView.width(for: monitor.style))
@@ -20,13 +20,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             button.setAccessibilityLabel("Network monitor")
         }
 
-        popover.behavior = .transient
-        popover.animates = false
-        popover.contentViewController = NSHostingController(rootView: PopoverView(monitor: monitor))
-
         monitor.onChange = { [weak self] in self?.refresh() }
         monitor.start()
         refresh()
+
+        // Memory testing: PULSEBAR_POPOVER_SECONDS=N opens the popover 2 s after launch for N seconds.
+        if let seconds = ProcessInfo.processInfo.environment["PULSEBAR_POPOVER_SECONDS"].flatMap(Double.init) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [self] in
+                toggle()
+                DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [self] in dropdown.close() }
+            }
+        }
 
         if let dir = Snapshot.directory {
             DispatchQueue.main.asyncAfter(deadline: .now() + 25) { [self] in
@@ -35,7 +39,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 toggle()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [self] in
                     if let w = item.button?.window { Snapshot.capture(w, to: dir.appendingPathComponent("live-item.png")) }
-                    if let w = popover.contentViewController?.view.window {
+                    if let w = dropdown.window {
                         Snapshot.capture(w, to: dir.appendingPathComponent("live-popover.png"))
                     }
                     NSApp.terminate(nil)
@@ -79,16 +83,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func toggle() {
         guard let button = item.button else { return }
-        if popover.isShown {
-            popover.performClose(nil)
+        if dropdown.isShown || dropdown.closedRecently {
+            dropdown.close()
         } else {
-            // An accessory app isn't active by default; without this the popover isn't key and a
-            // checkbox's first click only focuses the window instead of toggling it.
-            NSApp.activate()
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-            let window = popover.contentViewController?.view.window
-            window?.makeKey()
-            window?.makeFirstResponder(nil) // don't land in the host field with its text selected
+            // Built on open and freed on close: a closed dropdown costs no memory and no rendering.
+            dropdown.show(below: button, content: PopoverView(monitor: monitor))
         }
     }
 }

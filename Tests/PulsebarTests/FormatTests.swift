@@ -35,3 +35,14 @@ final class FormatTests: XCTestCase {
         XCTAssertEqual(Format.ping(14.2), " 14")
     }
 }
+
+final class MiniChartTests: XCTestCase {
+    func testAxisTopsAreRound() {
+        XCTAssertEqual(MiniChart.niceCeiling(343), 500)
+        XCTAssertEqual(MiniChart.niceCeiling(52), 100)
+        XCTAssertEqual(MiniChart.niceCeiling(0), 1)
+        // 12 MB/s peak → 20M, which Format labels as "20M" (not "19M").
+        XCTAssertEqual(Format.axisRate(MiniChart.niceByteCeiling(12 * 1_048_576)), "20M")
+        XCTAssertEqual(Format.axisRate(MiniChart.niceByteCeiling(590 * 1024)), "1M")
+    }
+}

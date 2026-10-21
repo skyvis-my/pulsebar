@@ -45,26 +45,25 @@ at least 5 ms and more than 10%; the popover shows every reading live, and the g
 
 ## Popover
 
-Click the item for ping and bandwidth history graphs (1m / 5m / 15m / 1h), with min / avg / max /
+Click the item for a panel with ping and bandwidth history graphs (1m / 5m / 15m / 1h), with min / avg / max /
 jitter / loss for ping and peak / total moved for bandwidth. You can also change the menu bar
 style, the ping host, and open at login there. The last hour of samples is saved to
 `~/Library/Application Support/Pulsebar/history.json` and reloaded on launch.
 
 ## Backpack mode: lid closed, screen off, still running
 
-Two switches in the popover:
+One switch in the popover, **Keep running with lid closed**. It disables sleep
+(`pmset -a disablesleep 1`) so macOS and the network keep running with the lid shut, and turns the
+built-in screen off about 2 seconds after the lid closes (macOS would otherwise leave it lit). It
+always starts off, and turns itself off, restoring normal sleep:
 
-- **Keep running with lid closed** disables sleep (`pmset -a disablesleep 1`) so macOS and the
-  network keep running with the lid shut. It always starts off, and turns itself off (restoring
-  normal sleep):
-  - at 20% battery when not charging,
-  - when macOS reports the Mac is running seriously hot,
-  - when Pulsebar quits, including logout, shutdown, or a `kill`,
-  - on the next launch, if Pulsebar crashed while it was on.
+- at 20% battery when not charging,
+- when macOS reports the Mac is running seriously hot,
+- when Pulsebar quits, including logout, shutdown, or a `kill`,
+- on the next launch, if Pulsebar crashed while it was on.
 
-- **Screen off when lid closes** (on by default). With sleep disabled, macOS leaves the built-in
-  screen lit behind a closed lid. Pulsebar turns it off about 2 seconds after the lid closes. It
-  does nothing while an external monitor is awake, so lid-closed desk setups are unaffected.
+If another app keeps the Mac running instead, Pulsebar still turns the screen off when the lid
+closes. It never does while an external monitor is awake, so lid-closed desk setups are unaffected.
 
 A closed bag blocks airflow, so keep heavy workloads out of the backpack.
 
@@ -90,6 +89,10 @@ already allows these commands, nothing more is needed.
   No root and no `ping` subprocess. The default host is `1.1.1.1`.
 
 Pulsebar makes no network requests other than the ping, and collects no data.
+
+Memory: about 16 MB idle and about 30 MB while the panel is open (on macOS 27; a bare AppKit
+menu bar app is about 13 MB). The panel is a plain window drawn with simple shapes rather than
+NSPopover and Swift Charts, which each hold 130 MB or more of graphics memory while shown.
 
 ## Build from source
 

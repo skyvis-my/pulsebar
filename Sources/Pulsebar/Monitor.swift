@@ -66,10 +66,6 @@ final class Monitor: ObservableObject {
         }
     }
 
-    /// Turn the built-in display off when the lid closes but macOS keeps running (backpack mode).
-    @Published var lidDisplayOff: Bool {
-        didSet { UserDefaults.standard.set(lidDisplayOff, forKey: "lidDisplayOff") }
-    }
     /// Whether macOS keeps running with the lid closed (`pmset disablesleep 1`, set by any app).
     @Published private(set) var sleepDisabled = LidWatcher.sleepDisabled
 
@@ -92,7 +88,6 @@ final class Monitor: ObservableObject {
         let d = UserDefaults.standard
         style = d.string(forKey: "style").flatMap(MenuStyle.init) ?? .spark
         host = d.string(forKey: "host") ?? "1.1.1.1"
-        lidDisplayOff = d.object(forKey: "lidDisplayOff") as? Bool ?? true
         loadHistory()
         // Crash guard: if we left sleep disabled last time (no clean quit), undo it now.
         if d.bool(forKey: Self.ownedKey) {
@@ -220,7 +215,8 @@ final class Monitor: ObservableObject {
         let disabled = LidWatcher.sleepDisabled
         if disabled != sleepDisabled { sleepDisabled = disabled }
         checkKeepRunningGuards()
-        lidWatcher.tick(enabled: lidDisplayOff)
+        // Whenever the Mac stays running with the lid closed (via Pulsebar or another app), keep the screen dark.
+        lidWatcher.tick(enabled: sleepDisabled)
         firePing()
         onChange?()
     }

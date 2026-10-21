@@ -1,4 +1,3 @@
-import Charts
 import SwiftUI
 
 private enum Window: Int, CaseIterable, Identifiable {
@@ -83,29 +82,13 @@ struct PopoverView: View {
         let jitter = zip(ok, ok.dropFirst()).map { abs($1 - $0) }
         return VStack(alignment: .leading, spacing: 6) {
             sectionTitle("Ping", unit: "ms")
-            Chart {
-                ForEach(pts) { p in
-                    if let ms = p.ping {
-                        AreaMark(x: .value("t", p.date), y: .value("ms", ms), series: .value("seg", p.segment))
-                            .foregroundStyle(pingColor.opacity(0.15))
-                            .interpolationMethod(.monotone)
-                        LineMark(x: .value("t", p.date), y: .value("ms", ms), series: .value("seg", p.segment))
-                            .foregroundStyle(pingColor)
-                            .lineStyle(StrokeStyle(lineWidth: 1.4))
-                            .interpolationMethod(.monotone)
-                    } else {
-                        RuleMark(x: .value("t", p.date))
-                            .foregroundStyle(Color.red.opacity(0.55))
-                            .lineStyle(StrokeStyle(lineWidth: 1.5))
-                    }
-                }
-            }
-            .chartXScale(domain: domain)
-            .chartXAxis(.hidden)
-            .chartYAxis { AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) {
-                AxisGridLine().foregroundStyle(Color.secondary.opacity(0.2))
-                AxisValueLabel().font(.system(size: 9, design: .monospaced))
-            } }
+            MiniChart(
+                xs: Self.positions(pts, domain),
+                segments: pts.map(\.segment),
+                series: [.init(values: pts.map(\.ping), color: pingColor, fill: true)],
+                markers: zip(Self.positions(pts, domain), pts).filter { $1.ping == nil }.map(\.0),
+                label: { String(format: "%.0f", $0) }
+            )
             .frame(height: 96)
             statRow([
                 ("min", ok.min().map { Format.pingLong($0) } ?? "–"),
@@ -131,30 +114,16 @@ struct PopoverView: View {
                 legend("down", downColor)
                 legend("up", upColor)
             }
-            Chart {
-                ForEach(pts) { p in
-                    AreaMark(x: .value("t", p.date), y: .value("B/s", p.down),
-                             series: .value("seg", "a\(p.segment)"), stacking: .unstacked)
-                        .foregroundStyle(downColor.opacity(0.22))
-                        .interpolationMethod(.monotone)
-                    LineMark(x: .value("t", p.date), y: .value("B/s", p.down), series: .value("dir", "d\(p.segment)"))
-                        .foregroundStyle(downColor)
-                        .lineStyle(StrokeStyle(lineWidth: 1.4))
-                        .interpolationMethod(.monotone)
-                    LineMark(x: .value("t", p.date), y: .value("B/s", p.up), series: .value("dir", "u\(p.segment)"))
-                        .foregroundStyle(upColor)
-                        .lineStyle(StrokeStyle(lineWidth: 1.4))
-                        .interpolationMethod(.monotone)
-                }
-            }
-            .chartXScale(domain: domain)
-            .chartXAxis(.hidden)
-            .chartYAxis { AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { v in
-                AxisGridLine().foregroundStyle(Color.secondary.opacity(0.2))
-                AxisValueLabel {
-                    Text(Format.axisRate(v.as(Double.self) ?? 0)).font(.system(size: 9, design: .monospaced))
-                }
-            } }
+            MiniChart(
+                xs: Self.positions(pts, domain),
+                segments: pts.map(\.segment),
+                series: [
+                    .init(values: pts.map { $0.down }, color: downColor, fill: true),
+                    .init(values: pts.map { $0.up }, color: upColor),
+                ],
+                bytes: true,
+                label: { Format.axisRate($0) }
+            )
             .frame(height: 96)
             statRow([
                 ("peak ↓", Format.axisRate(peakDown)),
@@ -197,8 +166,6 @@ struct PopoverView: View {
                     .foregroundStyle(monitor.keepRunningNote == nil ? Color.secondary.opacity(0.7) : Color.orange)
                     .padding(.leading, 20)
             }
-            Toggle("Screen off when lid closes", isOn: $monitor.lidDisplayOff)
-                .toggleStyle(.checkbox)
             HStack {
                 Toggle("Open at login", isOn: $monitor.launchAtLogin)
                     .toggleStyle(.checkbox)
@@ -213,10 +180,10 @@ struct PopoverView: View {
     private var keepRunningCaption: String {
         if let note = monitor.keepRunningNote { return note }
         if monitor.keepRunning {
-            return "Turns off at \(KeepAwake.batteryFloor)% battery, if the Mac runs hot, or when Pulsebar quits."
+            return "Screen goes dark when closed. Stops at \(KeepAwake.batteryFloor)% battery, if the Mac runs hot, or on quit."
         }
         return monitor.sleepDisabled
-            ? "Another app is keeping sleep disabled."
+            ? "Another app keeps the Mac running. The screen still goes dark when closed."
             : "Closing the lid sleeps the Mac."
     }
 
@@ -246,6 +213,12 @@ struct PopoverView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+    }
+
+    /// Each point's position across the time window, 0 (oldest edge) to 1 (now).
+    private static func positions(_ pts: [Point], _ domain: ClosedRange<Date>) -> [Double] {
+        let span = domain.upperBound.timeIntervalSince(domain.lowerBound)
+        return pts.map { min(1, max(0, $0.date.timeIntervalSince(domain.lowerBound) / span)) }
     }
 
     /// Averages runs of samples so long windows stay cheap to draw. A bucket counts as a

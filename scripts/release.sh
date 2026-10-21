@@ -16,6 +16,13 @@ SHA=$(shasum -a 256 "$ZIP" | cut -d' ' -f1)
 
 gh release create "v$VERSION" "$ZIP" --repo "$REPO" --title "Pulsebar $VERSION" --generate-notes
 
+# GitHub takes a little while to serve a new asset; bump the cask only once the zip downloads intact.
+URL="https://github.com/$REPO/releases/download/v$VERSION/Pulsebar-$VERSION.zip"
+for _ in {1..30}; do
+  [[ "$(curl -sfL "$URL" | shasum -a 256 | cut -d' ' -f1)" == "$SHA" ]] && break
+  sleep 2
+done
+
 # Update the cask in the tap.
 TMP=$(mktemp -d)
 gh repo clone "$TAP" "$TMP" -- --quiet
