@@ -185,6 +185,17 @@ struct PopoverView: View {
                     .font(mono)
                     .frame(width: 150)
             }
+            VStack(alignment: .leading, spacing: 2) {
+                Toggle("Screen off when lid closes", isOn: $monitor.lidDisplayOff)
+                    .toggleStyle(.checkbox)
+                Text(monitor.sleepDisabled
+                     ? "Sleep is disabled, so the Mac keeps running."
+                     : "Sleep is on, so closing the lid sleeps the Mac.")
+                    .font(.system(size: 10))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(.tertiary)
+                    .padding(.leading, 20)
+            }
             HStack {
                 Toggle("Open at login", isOn: $monitor.launchAtLogin)
                     .toggleStyle(.checkbox)

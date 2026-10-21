@@ -48,6 +48,17 @@ jitter / loss for ping and peak / total moved for bandwidth. You can also change
 style, the ping host, and open at login there. The last hour of samples is saved to
 `~/Library/Application Support/Pulsebar/history.json` and reloaded on launch.
 
+## Backpack mode: lid closed, screen off, still running
+
+If sleep is disabled on your Mac (`sudo pmset -a disablesleep 1`, or a keep-awake app that sets it),
+closing the lid keeps macOS and the network running, but the built-in screen stays lit. With
+**Screen off when lid closes** on (the default), Pulsebar turns the display off about 2 seconds
+after the lid closes. It does nothing while an external monitor is awake, so lid-closed desk setups
+are unaffected. The popover shows whether sleep is currently disabled. No admin rights are needed.
+
+Pulsebar doesn't change your sleep setting. A closed bag blocks airflow, so keep heavy workloads
+out of the backpack.
+
 ## How it measures
 
 - **Bandwidth**: 64-bit interface counters from `sysctl(NET_RT_IFLIST2)`, summed over physical
