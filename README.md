@@ -9,10 +9,10 @@ status item width is computed once from worst-case strings. Pick a style in the 
 
 | Style | Shows | Width |
 |---|---|---|
-| Twin stack | ↑/↓ speeds, ping | 61 pt |
-| Stack + spark (default) | ↑/↓ speeds over a faint bandwidth history, ping sparkline, ping | 87 pt |
+| Twin stack | ↑/↓ speeds, ping | 59 pt |
+| Stack + spark (default) | Same layout, with faint bandwidth history behind the speeds and ping history behind the ping | 59 pt |
 | Single line | `↓ 98M ↑  1M 214` | 99 pt |
-| Ping only | last 6 pings as latency bars, ping | 56 pt |
+| Ping only | last 6 pings as latency bars, ping | 48 pt |
 
 Speeds are bytes per second with a one-letter unit (`K`, `M`, `G`), always whole numbers: the unit
 steps up at 1000, so three digits always fit. Ping is always in milliseconds, so the menu bar shows

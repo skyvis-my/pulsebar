@@ -11,14 +11,14 @@ final class StatusItemView: NSView {
     var recentRates: [(up: Double, down: Double)] = []
 
     private static let small = NSFont.monospacedSystemFont(ofSize: 9, weight: .medium)
-    private static let big = NSFont.monospacedSystemFont(ofSize: 12, weight: .medium)
+    private static let big = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
     private static let line = NSFont.monospacedSystemFont(ofSize: 10, weight: .medium)
     private static let pad: CGFloat = 3
     private static let gap: CGFloat = 4
-    private static let sparkWidth: CGFloat = 22
     /// Widest possible speed line; the twin column is always exactly this wide.
     private static let twinSample = "↑999M"
     private static let barCount = 6
+    private static let barStep: CGFloat = 3 // 2 pt bar + 1 pt gap
 
     override var isFlipped: Bool { true }
     override func hitTest(_ point: NSPoint) -> NSView? { nil } // let the status button take clicks
@@ -28,9 +28,9 @@ final class StatusItemView: NSView {
         let pingW = measure("999", big).width
         switch style {
         case .twin: return ceil(pad + twin + gap + pingW + pad)
-        case .spark: return ceil(pad + twin + gap + sparkWidth + gap + pingW + pad)
+        case .spark: return ceil(pad + twin + gap + pingW + pad)
         case .line: return ceil(pad + measure(lineText(up: 0, down: 0, ping: nil), line).width + pad)
-        case .pingOnly: return ceil(pad + CGFloat(barCount) * 4 - 1 + gap + pingW + pad)
+        case .pingOnly: return ceil(pad + CGFloat(barCount) * barStep - 1 + gap + pingW + pad)
         }
     }
 
@@ -48,15 +48,15 @@ final class StatusItemView: NSView {
             }
             x = drawTwin(at: x, height: h, color: label) + Self.gap
             if style == .spark {
-                drawSpark(in: NSRect(x: x, y: (h - 14) / 2, width: Self.sparkWidth, height: 14))
-                x += Self.sparkWidth + Self.gap
+                let pingW = Self.measure("999", Self.big).width
+                drawPingHistory(in: NSRect(x: x - 1, y: 2, width: pingW + 2, height: h - 4))
             }
             drawCentered(Format.ping(ping), Self.big, pingColor, x: x, height: h)
         case .line:
             drawCentered(Self.lineText(up: up, down: down, ping: ping), Self.line, label, x: x, height: h)
         case .pingOnly:
             drawBars(at: x, height: h)
-            x += CGFloat(Self.barCount) * 4 - 1 + Self.gap
+            x += CGFloat(Self.barCount) * Self.barStep - 1 + Self.gap
             drawCentered(Format.ping(ping), Self.big, pingColor, x: x, height: h)
         }
     }
@@ -105,31 +105,47 @@ final class StatusItemView: NSView {
     private static let downTint = NSColor(red: 0.36, green: 0.79, blue: 0.65, alpha: 1)
     private static let upTint = NSColor(red: 0.62, green: 0.55, blue: 0.95, alpha: 1)
 
-    private func drawSpark(in rect: NSRect) {
+    /// Faint ping history behind the ping number, tinted by current quality — costs no width.
+    private func drawPingHistory(in rect: NSRect) {
         let pts = Array(recent.suffix(15))
         guard pts.count > 1 else { return }
         let ceiling = max(pts.compactMap { $0 }.max() ?? 0, 40)
-        let step = rect.width / CGFloat(14)
+        let step = rect.width / 14
         let x0 = rect.maxX - step * CGFloat(pts.count - 1)
-        let path = NSBezierPath()
-        var penDown = false
+        // Top out at 80%, like the bandwidth history, so the digits stay legible.
+        func y(_ v: Double) -> CGFloat { rect.maxY - CGFloat(v / ceiling) * rect.height * 0.8 }
+        let tint = Quality(ping).color
+
+        var run: [NSPoint] = []
+        func flush() {
+            defer { run.removeAll() }
+            guard run.count > 1 else { return }
+            let area = NSBezierPath()
+            area.move(to: NSPoint(x: run[0].x, y: rect.maxY))
+            run.forEach { area.line(to: $0) }
+            area.line(to: NSPoint(x: run[run.count - 1].x, y: rect.maxY))
+            area.close()
+            tint.withAlphaComponent(0.2).setFill()
+            area.fill()
+            let line = NSBezierPath()
+            line.move(to: run[0])
+            run.dropFirst().forEach { line.line(to: $0) }
+            line.lineWidth = 1
+            tint.withAlphaComponent(0.6).setStroke()
+            line.stroke()
+        }
         for (i, v) in pts.enumerated() {
             let x = x0 + step * CGFloat(i)
             guard let v else {
-                // Timeout: a red tick at the top of the strip, and break the line.
+                // Timeout: a red tick at the top, and break the line.
+                flush()
                 Quality.poor.color.setFill()
                 NSRect(x: x - 0.75, y: rect.minY, width: 1.5, height: 3).fill()
-                penDown = false
                 continue
             }
-            let y = rect.maxY - CGFloat(v / ceiling) * rect.height
-            if penDown { path.line(to: NSPoint(x: x, y: y)) } else { path.move(to: NSPoint(x: x, y: y)) }
-            penDown = true
+            run.append(NSPoint(x: x, y: y(v)))
         }
-        path.lineWidth = 1.2
-        path.lineJoinStyle = .round
-        Quality(ping).color.setStroke()
-        path.stroke()
+        flush()
     }
 
     private func drawBars(at x: CGFloat, height h: CGFloat) {
@@ -142,7 +158,7 @@ final class StatusItemView: NSView {
             let frac = v.map { min(1, max(0.15, log10(max($0, 5) / 5) / 2)) } ?? 1
             let bh = maxH * CGFloat(frac)
             Quality(v).color.setFill()
-            NSRect(x: x + CGFloat(lead + i) * 4, y: base - bh, width: 3, height: bh).fill()
+            NSRect(x: x + CGFloat(lead + i) * Self.barStep, y: base - bh, width: Self.barStep - 1, height: bh).fill()
         }
     }
 
