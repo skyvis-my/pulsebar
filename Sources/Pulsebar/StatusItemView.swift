@@ -22,7 +22,7 @@ final class StatusItemView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil } // let the status button take clicks
 
     static func width(for style: MenuStyle) -> CGFloat {
-        let twin = measure("↑ 99.9 MB/s", small).width
+        let twin = measure("↑ 999 MB/s", small).width
         let pingW = measure("999", big).width
         switch style {
         case .twin: return ceil(pad + twin + gap + pingW + pad)
@@ -41,7 +41,7 @@ final class StatusItemView: NSView {
         switch style {
         case .twin, .spark:
             if style == .spark {
-                let twinW = Self.measure("↑ 99.9 MB/s", Self.small).width
+                let twinW = Self.measure("↑ 999 MB/s", Self.small).width
                 drawRateHistory(in: NSRect(x: x - 2, y: 2, width: twinW + 4, height: h - 4))
             }
             x = drawTwin(at: x, height: h, color: label) + Self.gap
@@ -69,7 +69,7 @@ final class StatusItemView: NSView {
         let attrs: [NSAttributedString.Key: Any] = [.font: Self.small, .foregroundColor: color]
         top.draw(at: NSPoint(x: x, y: y0), withAttributes: attrs)
         bottom.draw(at: NSPoint(x: x, y: y0 + lineH), withAttributes: attrs)
-        return x + Self.measure("↑ 99.9 MB/s", Self.small).width
+        return x + Self.measure("↑ 999 MB/s", Self.small).width
     }
 
     /// Faint download (filled) and upload (line) history behind the speed numbers — costs no width.

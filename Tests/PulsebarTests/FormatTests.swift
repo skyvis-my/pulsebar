@@ -7,13 +7,23 @@ final class FormatTests: XCTestCase {
                                    12_345_678, 98_000_000, 999_999_999, 5e12, 9e15]
 
     func testRateWidthIsFixed() {
-        for r in rates { XCTAssertEqual(Format.rate(r).count, 9, "\(r) → '\(Format.rate(r))'") }
-        XCTAssertEqual(Format.rate(98.0 * 1024 * 1024), "98.0 MB/s")
-        XCTAssertEqual(Format.rate(0), "   0  B/s")
+        for r in rates { XCTAssertEqual(Format.rate(r).count, 8, "\(r) → '\(Format.rate(r))'") }
+        XCTAssertEqual(Format.rate(98.0 * 1024 * 1024), " 98 MB/s")
+        XCTAssertEqual(Format.rate(1.2 * 1024 * 1024), "  1 MB/s")
+        XCTAssertEqual(Format.rate(1000), "  1 KB/s")
+        XCTAssertEqual(Format.rate(0), "  0  B/s")
     }
 
     func testCompactRateWidthIsFixed() {
         for r in rates { XCTAssertEqual(Format.compactRate(r).count, 4, "\(r) → '\(Format.compactRate(r))'") }
+    }
+
+    func testNoDecimalsAnywhere() {
+        for r in rates {
+            XCTAssertFalse(Format.rate(r).contains("."), Format.rate(r))
+            XCTAssertFalse(Format.compactRate(r).contains("."), Format.compactRate(r))
+        }
+        XCTAssertEqual(Format.pingLong(7.4), "7")
     }
 
     func testPingWidthIsFixedAndUnitless() {
