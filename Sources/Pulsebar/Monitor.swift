@@ -160,12 +160,13 @@ final class Monitor: ObservableObject {
         }
     }
 
-    /// The ping to display: holds the shown value until a reading differs from it by more than 10%,
-    /// so the number doesn't flicker between 14 and 15. Timeouts and recoveries always show at once.
-    /// History and graphs use every raw reading.
+    /// The ping to display: holds the shown value until a reading differs from it by at least 4 ms
+    /// and by more than 10%, so the number doesn't flicker between 12 and 14. Timeouts and recoveries
+    /// always show at once. History and graphs use every raw reading.
     static func steadied(shown: Double?, latest: Double?) -> Double? {
         guard let latest, let shown, shown > 0 else { return latest }
-        return abs(latest - shown) / shown > 0.10 ? latest : shown
+        let change = abs(latest - shown)
+        return change >= 4 && change / shown > 0.10 ? latest : shown
     }
 
     /// Most recent pings, oldest first, for the menu bar sparkline/bars.

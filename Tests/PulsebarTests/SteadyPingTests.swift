@@ -1,26 +1,29 @@
 import XCTest
 @testable import Pulsebar
 
-/// The shown ping only moves when a reading is more than 10% away from what's on screen.
+/// The shown ping only moves when a reading is at least 4 ms and more than 10% away from what's on screen.
 @MainActor
 final class SteadyPingTests: XCTestCase {
     func testSmallChangesHold() {
-        XCTAssertEqual(Monitor.steadied(shown: 20, latest: 21), 20)
-        XCTAssertEqual(Monitor.steadied(shown: 20, latest: 18), 20)
-        XCTAssertEqual(Monitor.steadied(shown: 20, latest: 22), 20) // exactly 10% holds
+        XCTAssertEqual(Monitor.steadied(shown: 20, latest: 23), 20)   // 3 ms
+        XCTAssertEqual(Monitor.steadied(shown: 12, latest: 15), 12)   // 25% but only 3 ms
+        XCTAssertEqual(Monitor.steadied(shown: 5, latest: 6), 5)      // 20% but only 1 ms
+        XCTAssertEqual(Monitor.steadied(shown: 100, latest: 109), 100) // 9 ms but only 9%
+        XCTAssertEqual(Monitor.steadied(shown: 40, latest: 44), 40)   // 4 ms but exactly 10%
     }
 
     func testLargerChangesUpdate() {
-        XCTAssertEqual(Monitor.steadied(shown: 20, latest: 23), 23)
-        XCTAssertEqual(Monitor.steadied(shown: 20, latest: 17), 17)
-        XCTAssertEqual(Monitor.steadied(shown: 5, latest: 6), 6) // 20% at low values
+        XCTAssertEqual(Monitor.steadied(shown: 20, latest: 24), 24)   // 4 ms, 20%
+        XCTAssertEqual(Monitor.steadied(shown: 12, latest: 16), 16)
+        XCTAssertEqual(Monitor.steadied(shown: 20, latest: 15), 15)
+        XCTAssertEqual(Monitor.steadied(shown: 100, latest: 111), 111)
     }
 
     func testDriftEventuallyUpdates() {
-        // Slow drift: each step is under 10%, but it updates once it's 10% past the shown value.
+        // Each step is small, but it updates once it's far enough from the shown value.
         var shown: Double? = 20
-        for v in [21.0, 21.5, 22.0, 22.5] { shown = Monitor.steadied(shown: shown, latest: v) }
-        XCTAssertEqual(shown, 22.5)
+        for v in [21.0, 22.0, 23.0, 24.0] { shown = Monitor.steadied(shown: shown, latest: v) }
+        XCTAssertEqual(shown, 24)
     }
 
     func testTimeoutsAndRecoveryShowImmediately() {
