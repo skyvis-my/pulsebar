@@ -1,1 +1,0 @@
-(eval):23: no such file or directory: ./lidprobe
