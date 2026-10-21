@@ -9,11 +9,10 @@ final class StatusItemView: NSView {
     var ping: Double?
     var recent: [Double?] = []
     var recentRates: [(up: Double, down: Double)] = []
-    /// "Keep running with lid closed" is on: arrows turn orange (ping number in ping-only style). No extra width.
-    var keepRunning = false
 
     private static let small = NSFont.monospacedSystemFont(ofSize: 9, weight: .medium)
-    private static let big = NSFont.monospacedSystemFont(ofSize: 11, weight: .medium)
+    /// Ping digits: tabular (fixed-width) digits, so "214" and "14" right-align without reflow.
+    private static let big = NSFont.monospacedDigitSystemFont(ofSize: 15, weight: .semibold)
     private static let line = NSFont.monospacedSystemFont(ofSize: 10, weight: .medium)
     /// macOS already insets every status item by 8 pt per side, so the content runs edge to edge.
     private static let pad: CGFloat = 0
@@ -54,14 +53,14 @@ final class StatusItemView: NSView {
                 let pingW = Self.measure("999", Self.big).width
                 drawPingHistory(in: NSRect(x: x - 1, y: 2, width: pingW + 2, height: h - 4))
             }
-            drawCentered(Format.ping(ping), Self.big, pingColor, x: x, height: h)
+            drawPing(at: x, height: h, color: pingColor)
         case .line:
             let text = tinted(Self.lineText(up: up, down: down, ping: ping), Self.line, label)
             text.draw(at: NSPoint(x: x, y: (h - text.size().height) / 2))
         case .pingOnly:
             drawBars(at: x, height: h)
             x += CGFloat(Self.barCount) * Self.barStep - 1 + Self.gap
-            drawCentered(Format.ping(ping), Self.big, keepRunning && ping != nil ? .systemOrange : pingColor, x: x, height: h)
+            drawPing(at: x, height: h, color: pingColor)
         }
     }
 
@@ -77,14 +76,34 @@ final class StatusItemView: NSView {
         return x + Self.measure(Self.twinSample, Self.small).width
     }
 
-    /// Colors the ↑/↓ arrows orange while keep-running is on.
+    /// Colors ↓ green and ↑ purple (as in the graphs), fading each with its own traffic.
     private func tinted(_ s: String, _ font: NSFont, _ color: NSColor) -> NSAttributedString {
         let a = NSMutableAttributedString(string: s, attributes: [.font: font, .foregroundColor: color])
-        guard keepRunning else { return a }
-        for (i, unit) in s.utf16.enumerated() where unit == 0x2191 || unit == 0x2193 {
-            a.addAttribute(.foregroundColor, value: NSColor.systemOrange, range: NSRange(location: i, length: 1))
+        for (i, unit) in s.utf16.enumerated() {
+            let tint: NSColor
+            switch unit {
+            case 0x2191: tint = Self.upTint.withAlphaComponent(Self.activity(up))
+            case 0x2193: tint = Self.downTint.withAlphaComponent(Self.activity(down))
+            default: continue
+            }
+            a.addAttribute(.foregroundColor, value: tint, range: NSRange(location: i, length: 1))
         }
         return a
+    }
+
+    /// Arrow opacity: faint at 1 KB/s or less, full at 1 MB/s or more, log scale in between.
+    static func activity(_ bytesPerSec: Double) -> CGFloat {
+        let kb = max(bytesPerSec / 1024, 1)
+        return 0.25 + 0.75 * CGFloat(min(1, log10(kb) / 3))
+    }
+
+    /// Ping right-aligned in a column sized for "999", so the width never changes.
+    private func drawPing(at x: CGFloat, height h: CGFloat, color: NSColor) {
+        let text = Format.ping(ping).trimmingCharacters(in: .whitespaces)
+        let size = Self.measure(text, Self.big)
+        let column = Self.measure("999", Self.big).width
+        text.draw(at: NSPoint(x: x + column - size.width, y: (h - size.height) / 2),
+                  withAttributes: [.font: Self.big, .foregroundColor: color])
     }
 
     /// Faint download (filled) and upload (line) history behind the speed numbers — costs no width.
@@ -173,12 +192,6 @@ final class StatusItemView: NSView {
             Quality(v).color.setFill()
             NSRect(x: x + CGFloat(lead + i) * Self.barStep, y: base - bh, width: Self.barStep - 1, height: bh).fill()
         }
-    }
-
-    private func drawCentered(_ s: String, _ font: NSFont, _ color: NSColor, x: CGFloat, height h: CGFloat) {
-        let size = Self.measure(s, font)
-        s.draw(at: NSPoint(x: x, y: (h - size.height) / 2),
-               withAttributes: [.font: font, .foregroundColor: color])
     }
 
     private static func lineText(up: Double, down: Double, ping: Double?) -> String {

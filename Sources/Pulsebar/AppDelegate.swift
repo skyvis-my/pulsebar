@@ -71,7 +71,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         view.ping = monitor.ping
         view.recent = monitor.recentPings(20)
         view.recentRates = monitor.recentRates(30)
-        view.keepRunning = monitor.keepRunning
         view.needsDisplay = true
         item.button?.setAccessibilityValue(
             "Download \(Format.rate(monitor.down)), upload \(Format.rate(monitor.up)), ping \(Format.pingLong(monitor.ping)) milliseconds"

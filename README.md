@@ -32,12 +32,13 @@ status item width is computed once from worst-case strings. Pick a style in the 
 
 | Style | Shows | Width |
 |---|---|---|
-| Twin stack | ↑/↓ speeds, ping | 52 pt |
-| Stack + spark (default) | Same layout, with faint bandwidth history behind the speeds and ping history behind the ping | 52 pt |
+| Twin stack | ↑/↓ speeds, ping | 60 pt |
+| Stack + spark (default) | Same layout, with faint bandwidth history behind the speeds and ping history behind the ping | 60 pt |
 | Single line | `↓ 98M ↑  1M 214` | 93 pt |
-| Ping only | last 6 pings as latency bars, ping | 41 pt |
+| Ping only | last 6 pings as latency bars, ping | 49 pt |
 
-Speeds are bytes per second with a one-letter unit (`K`, `M`, `G`), always whole numbers: the unit
+The ↓ (green) and ↑ (purple) arrows fade when idle and brighten with traffic, up to full strength
+at 1 MB/s. Speeds are bytes per second with a one-letter unit (`K`, `M`, `G`), always whole numbers: the unit
 steps up at 1000, so three digits always fit. Ping is always in milliseconds, so the menu bar shows
 no unit. A red `–` means the probe timed out.
 
@@ -60,7 +61,6 @@ Two switches in the popover:
   - when Pulsebar quits, including logout, shutdown, or a `kill`,
   - on the next launch, if Pulsebar crashed while it was on.
 
-  While it's on, the ↑↓ arrows in the menu bar turn orange (the ping number, in the ping-only style).
 - **Screen off when lid closes** (on by default). With sleep disabled, macOS leaves the built-in
   screen lit behind a closed lid. Pulsebar turns it off about 2 seconds after the lid closes. It
   does nothing while an external monitor is awake, so lid-closed desk setups are unaffected.
